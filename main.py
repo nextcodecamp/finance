@@ -84,3 +84,47 @@ def get_stock_history(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/stockperiod/{symbol}")
+def get_stock_period(
+    symbol: str ,
+    start: str ,
+    end: str ,
+    interval:str,
+    progress=False,
+    threads=False  
+):
+    print(symbol, start, end, interval  )
+      
+    try:
+        df = yf.download(symbol, start=start, end=end, interval=interval)
+        if df.empty:
+            return {"symbol": symbol, "rows": 0, "data": []}
+
+        df = df.reset_index()
+        df.columns = [
+        col[0] if isinstance(col, tuple) and col[0] == "Date"
+        else f"{col[0]}_{col[1]}" if isinstance(col, tuple) and col[1]
+        else str(col[0]) if isinstance(col, tuple)
+        else str(col)
+        for col in df.columns
+        ]
+
+        for col in df.columns:
+            df[col] = df[col].astype(str)
+
+        data = df.to_dict(orient="records")
+
+        return {
+            "symbol": symbol,
+            "start": str(start),
+            "end": str(end),
+            "interval": interval,
+            "count": len(data),
+            "data": data
+        }
+
+
+    except Exception as e:
+        return {"error": str(e)}
